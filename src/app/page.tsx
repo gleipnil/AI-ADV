@@ -1,65 +1,179 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { PERSONALITIES } from "@/lib/personalities";
+import { createInitialState, processTurn, processAIResponse } from "@/lib/game-engine";
+import { GameState } from "@/lib/types";
 
 export default function Home() {
+  const [input, setInput] = useState("");
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [history, setHistory] = useState<string[]>([
+    "INITIALIZING SYSTEM...",
+    "LOADING NARRATIVE MODULES...",
+    ...Object.values(PERSONALITIES).map(p =>
+      ` > MODULE '${p.id.toUpperCase()}' [${p.isHidden ? "STANDBY" : "OK"}]`
+    ),
+    "CONNECTING TO NEURAL LINK...",
+    "CONNECTION ESTABLISHED.",
+    "",
+    "AIアドベンチャーゲームへようこそ。",
+    "世界はまだ形を成しておらず、あなたの入力を待っています。",
+    "",
+    "どこから物語を始めますか？",
+  ]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Initialize game state on mount
+  useEffect(() => {
+    setGameState(createInitialState());
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !gameState) return;
+
+    const userInput = input;
+    setInput(""); // Clear input immediately
+
+    // Add user input to history
+    setHistory((prev) => [...prev, `> ${userInput}`]);
+
+    // Process turn (Local Logic for GM switching & Beat update)
+    // We still use local logic to determine GM switch before asking AI, 
+    // or we could let AI decide. For now, let's keep local logic for state updates
+    // and pass the *updated* state to the AI.
+
+    const { newState, messages: localMessages } = processTurn(userInput, gameState);
+
+    // Display local messages (like GM switch warnings) immediately
+    if (localMessages.length > 0) {
+      // Filter out the mock flavor text and choices from local engine, keep only system messages
+      // This is a bit hacky, ideally we separate logic. 
+      // For now, let's just use the AI response for the main content.
+      const systemMessages = localMessages.filter(m => m.startsWith("\n⚠") || m.startsWith("\n>>") || m.startsWith("\n==="));
+      setHistory((prev) => [...prev, ...systemMessages]);
+    }
+
+    setGameState(newState);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: userInput, gameState: newState }),
+      });
+
+      if (!response.ok) throw new Error("API Error");
+
+      const data = await response.json();
+      let messageContent = data.message;
+      let isStagnant = false;
+
+      // Check for hidden stagnation tag
+      if (messageContent.includes("[STAGNATION]")) {
+        isStagnant = true;
+        messageContent = messageContent.replace("[STAGNATION]", "").trim();
+      }
+
+      let newStatus = "active";
+      if (messageContent.includes("[THE_END]")) {
+        newStatus = "completed";
+        messageContent = messageContent.replace("[THE_END]", "").trim();
+      } else if (messageContent.includes("[GAME_OVER]")) {
+        newStatus = "game_over";
+        messageContent = messageContent.replace("[GAME_OVER]", "").trim();
+      }
+
+      setHistory((prev) => [...prev, messageContent]);
+
+      // Update history in state for context in next turn
+      setGameState(prev => {
+        if (!prev) return null;
+
+        let updatedState = {
+          ...prev,
+          status: newStatus as any,
+          stagnationCount: isStagnant ? prev.stagnationCount + 1 : 0, // Increment or reset
+          history: [
+            ...prev.history,
+            { role: "user" as const, content: userInput },
+            { role: "model" as const, content: messageContent }
+          ]
+        };
+
+        // Process AI response for special tags like [JUMP_TO]
+        updatedState = processAIResponse(updatedState, data.message);
+
+        return updatedState;
+      });
+
+    } catch (error) {
+      console.error(error);
+      setHistory((prev) => [...prev, "⚠ COMMUNICATION ERROR: Neural Link Severed."]);
+    }
+  };
+
+  const handleRestart = () => {
+    setGameState(createInitialState());
+    setHistory([
+      "SYSTEM REBOOT...",
+      "LOADING NARRATIVE MODULES...",
+      ...Object.values(PERSONALITIES).map(p =>
+        ` > MODULE '${p.id.toUpperCase()}' [${p.isHidden ? "STANDBY" : "OK"}]`
+      ),
+      "CONNECTING TO NEURAL LINK...",
+      "CONNECTION ESTABLISHED.",
+      "",
+      "AIアドベンチャーゲームへようこそ。",
+      "世界はまだ形を成しておらず、あなたの入力を待っています。",
+      "",
+      "どこから物語を始めますか？",
+    ]);
+    setInput("");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div className="crt-container">
+      <div className="crt-overlay" />
+      <div className="terminal-content">
+        {history.map((line, i) => (
+          <div key={i} className="whitespace-pre-wrap mb-1">
+            {line}
+          </div>
+        ))}
+
+        {gameState?.status === "active" ? (
+          <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
+            <span className="mr-2">{">"}</span>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="terminal-input flex-1"
+              autoFocus
+              spellCheck={false}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+          </form>
+        ) : (
+          <div className="mt-8 text-center">
+            <h1 className="text-4xl font-bold mb-4 glitch-text">
+              {gameState?.status === "completed" ? "THE END" : "GAME OVER"}
+            </h1>
+            <button
+              onClick={handleRestart}
+              className="border-2 border-green-500 px-6 py-2 hover:bg-green-500 hover:text-black transition-colors terminal-font"
+            >
+              RESTART SYSTEM
+            </button>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }

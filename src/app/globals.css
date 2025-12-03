@@ -1,26 +1,211 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
+  --terminal-glow: #ffffff80;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-vt323: var(--font-vt323);
+  --font-dotgothic16: var(--font-dotgothic16);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-vt323), var(--font-dotgothic16), monospace;
+  overflow: hidden;
+  margin: 0;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* CRT Effects */
+.crt-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.crt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg,
+      rgba(255, 0, 0, 0.06),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  z-index: 10;
+  animation: flicker 0.15s infinite;
+}
+
+.crt-overlay::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: rgba(18, 16, 16, 0.1);
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% {
+    opacity: 0.027906;
+  }
+
+  5% {
+    opacity: 0.048532;
+  }
+
+  10% {
+    opacity: 0.011398;
+  }
+
+  15% {
+    opacity: 0.039627;
+  }
+
+  20% {
+    opacity: 0.049345;
+  }
+
+  25% {
+    opacity: 0.004643;
+  }
+
+  30% {
+    opacity: 0.040275;
+  }
+
+  35% {
+    opacity: 0.012984;
+  }
+
+  40% {
+    opacity: 0.004248;
+  }
+
+  45% {
+    opacity: 0.041743;
+  }
+
+  50% {
+    opacity: 0.005866;
+  }
+
+  55% {
+    opacity: 0.047998;
+  }
+
+  60% {
+    opacity: 0.020313;
+  }
+
+  65% {
+    opacity: 0.041988;
+  }
+
+  70% {
+    opacity: 0.023451;
+  }
+
+  75% {
+    opacity: 0.037219;
+  }
+
+  80% {
+    opacity: 0.049197;
+  }
+
+  85% {
+    opacity: 0.009363;
+  }
+
+  90% {
+    opacity: 0.026662;
+  }
+
+  95% {
+    opacity: 0.045475;
+  }
+
+  100% {
+    opacity: 0.004368;
+  }
+}
+
+/* Terminal Styling */
+.terminal-content {
+  height: 100%;
+  width: 100%;
+  padding: 2rem;
+  overflow-y: auto;
+  text-shadow: 0 0 5px var(--terminal-glow);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+/* Scrollbar styling for webkit */
+.terminal-content::-webkit-scrollbar {
+  width: 12px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: #000;
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: var(--foreground);
+  border: 3px solid #000;
+}
+
+/* Cursor Blinking */
+.cursor {
+  display: inline-block;
+  width: 10px;
+  height: 1.2em;
+  background-color: var(--foreground);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Input styling */
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+  width: 100%;
+  text-shadow: 0 0 5px var(--terminal-glow);
+  caret-color: var(--foreground);
 }
