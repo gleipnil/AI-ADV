@@ -7,7 +7,8 @@ const GM_TRIGGERS: Record<string, string[]> = {
     warlord: ["戦う", "攻撃", "剣", "殺す", "軍", "戦争", "殴る", "破壊"],
     detective: ["推理", "証拠", "謎", "調べる", "尋問", "論理", "犯人", "トリック"],
     jester: ["笑う", "踊る", "盗む", "嘘", "冗談", "イタズラ", "狂う", "遊ぶ"],
-    bard: ["歌う", "詩", "泣く", "祈る", "美しい", "思い出", "犠牲", "守る"],
+    bard: ["歌う", "詩", "泣く", "祈る", "美しい", "祈り", "犠牲", "守る"],
+    storyteller: ["怖い", "暗い", "音", "幽霊", "呪い", "死", "逃げる", "隠れる", "怪談", "恐怖"],
     cyberpunk: ["ハッキング", "コード", "電脳", "ネットワーク", "インストール", "バグ", "AI", "未来"],
     madgod: ["リセット", "デバッグ", "GM", "システム", "終了", "コンソール", "メタ"],
 };
@@ -26,6 +27,7 @@ export function createInitialState(): GameState {
             jester: 0,
             bard: 0,
             detective: 0,
+            storyteller: 0,
             cyberpunk: 0,
             madgod: 0,
         },
@@ -75,6 +77,10 @@ const GM_SPECIAL_CHOICES: Record<string, { id: string; label: string; descriptio
         { id: "p", label: "Poem", description: "即興で詩を詠む" },
         { id: "s", label: "Sing", description: "感情を込めて歌う" },
         { id: "l", label: "Lament", description: "世界の悲劇を嘆く" }
+    ],
+    storyteller: [
+        { id: "l", label: "Listen", description: "耳を澄ます" },
+        { id: "s", label: "Sense", description: "気配を探る" }
     ],
     cyberpunk: [
         { id: "h", label: "Hack", description: "現実をハッキングする" },
@@ -142,13 +148,19 @@ export function processTurn(input: string, state: GameState): { newState: GameSt
         if (newState.turnCount === 3) {
             // Find max affinity
             let maxAffinity = -1;
-            let bestGM = "historian"; // Default
+            let bestGM = "historian";
 
             for (const [gmId, score] of Object.entries(newState.gmAffinity)) {
                 if (score > maxAffinity) {
                     maxAffinity = score;
                     bestGM = gmId;
                 }
+            }
+
+            // If no specific affinity was built (all 0), choose randomly from the 4 main GMs
+            if (maxAffinity === 0) {
+                const defaultGMs = ["historian", "jester", "bard", "warlord"];
+                bestGM = defaultGMs[Math.floor(Math.random() * defaultGMs.length)];
             }
 
             nextGMId = bestGM;
@@ -243,6 +255,9 @@ export function processTurn(input: string, state: GameState): { newState: GameSt
             break;
         case "bard":
             flavorText = `詩人: 「ああ、${processedInput}... なんて悲劇的で美しい響きでしょう。${randomResponse}」`;
+            break;
+        case "storyteller":
+            flavorText = `怪談師: 「${processedInput}... ふふふ、聞こえますか？ ${randomResponse}」`;
             break;
         case "cyberpunk":
             flavorText = `パンク野郎: 「${processedInput}... ソースコードに干渉してるな。${randomResponse}」`;
