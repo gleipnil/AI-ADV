@@ -51,21 +51,22 @@ Instructions:
 2. Evaluate if the player's input advances the story or reveals significant new information.
    - If the story does NOT advance (e.g., repeated "Look", "Wait", nonsense, or loops), append the tag [STAGNATION] to the end of your response (invisible to player).
    - If the story advances, do NOT append the tag.
-3. Handle Stagnation:
-   - If Stagnation Count is 0-2: Provide a narrative warning if count > 0 (e.g., "Time is running out", "You feel watched").
-   - If Stagnation Count is 3: Inflict a minor penalty or scary event to urge action.
-   - If Stagnation Count is 4+: FORCE the story forward. Trigger a major event (e.g., enemy attack, floor collapse) that moves the player to a new situation. Do NOT output [STAGNATION] in this case, as the story *has* moved.
+3. Handle Stagnation & Pacing:
+   - **Turn > 16**: If Stagnation Count >= 3, you MUST FORCE a scene change. The environment changes drastically, or a new threat appears. Do NOT allow the player to stay in the same situation.
+   - **Turn > 25**: The story is ending. Rush towards the climax and conclusion.
+   - **Turn > 30**: If the player resists the ending, FORCE a "Reasonable Misfortune" (Game Over) or a chaotic bad end.
+   - If Stagnation Count is 0-2 (and Turn <= 16): Provide a narrative warning if count > 0.
+   - If Stagnation Count is 3 (and Turn <= 16): Inflict a minor penalty.
+   - If Stagnation Count is 4+: FORCE the story forward.
 4. Advance the story according to the current beat.
-   - **Dynamic Skipping**: If the player's action dramatically changes the situation (e.g., defeating a boss early, solving the main mystery), you can SKIP ahead.
-   - To skip, append the tag [JUMP_TO: BeatName] to the end of your response. Replace "BeatName" with the exact name of the target beat from the list above.
+   - **Dynamic Skipping**: If the player's action dramatically changes the situation, you can SKIP ahead.
+   - To skip, append the tag [JUMP_TO: BeatName] to the end of your response.
    - Example: [JUMP_TO: Finale]
 5. Maintain your persona's tone: ${currentGM.tone}.
 6. Provide a response in Japanese.
 7. After your response, suggest 2-3 choices for the player. Format choices as: [ID] Label - Description.
-   - **IMPORTANT**: The [ID] MUST be a single alphabet letter (e.g., [A], [B], [C]). Do NOT use Japanese characters or numbers for the ID.
+   - **IMPORTANT**: The [ID] MUST be a single alphabet letter (e.g., [A], [B], [C]).
    - Example: [N] North - Go to the forest.
-   - Include at least one choice relevant to your persona.
-   - Include standard choices like Look, Wait, etc. if appropriate.
 8. Do NOT output JSON. Output raw text formatted for a retro terminal.
 9. **Game Endings**:
    - If the player successfully completes the main objective or reaches a narrative conclusion, output the tag [THE_END] at the very end.
@@ -73,9 +74,7 @@ Instructions:
 10. **GM Evaluation (Required when [THE_END] or [GAME_OVER] is triggered)**:
     - Before the tag, provide a "GM Evaluation" section.
     - **Summary**: 1-2 lines summarizing the story.
-    - **Feedback**:
-      - If [GAME_OVER]: Evaluate the player's actions and suggest what they could have done better.
-      - If [THE_END]: Evaluate the player's performance and express expectations for their future adventures.
+    - **Feedback**: Evaluate the player's actions.
     - Format this section clearly (e.g., using "=== GM EVALUATION ===").
 `;
 
@@ -90,7 +89,9 @@ Instructions:
         });
 
         // Construct chat history for context
-        const chatHistory = gameState.history.map(h => ({
+        // Truncate to last 40 messages to prevent context length issues
+        const recentHistory = gameState.history.slice(-40);
+        const chatHistory = recentHistory.map(h => ({
             role: h.role === "user" ? "user" : "model",
             parts: [{ text: h.content }],
         }));

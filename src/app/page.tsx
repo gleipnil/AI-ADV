@@ -10,6 +10,7 @@ export default function Home() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [thinkingMessage, setThinkingMessage] = useState("");
+  const [retryData, setRetryData] = useState<{ input: string; state: GameState } | null>(null);
   const [history, setHistory] = useState<string[]>([
     "INITIALIZING SYSTEM...",
     "LOADING NARRATIVE MODULES...",
@@ -35,16 +36,12 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history, isLoading]); // Scroll when loading state changes too
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !gameState) return;
-
-    const userInput = input;
-    setInput(""); // Clear input immediately
+  const sendToAPI = async (userInput: string, currentState: GameState) => {
     setIsLoading(true);
+    setRetryData(null); // Clear previous retry data
 
     // Select thinking message based on current GM
-    const currentGM = PERSONALITIES[gameState.currentGMId];
+    const currentGM = PERSONALITIES[currentState.currentGMId];
     if (currentGM && currentGM.thinkingMessages) {
       const randomMsg = currentGM.thinkingMessages[Math.floor(Math.random() * currentGM.thinkingMessages.length)];
       setThinkingMessage(randomMsg);
@@ -52,32 +49,11 @@ export default function Home() {
       setThinkingMessage("GM is thinking...");
     }
 
-    // Add user input to history
-    setHistory((prev) => [...prev, `> ${userInput}`]);
-
-    // Process turn (Local Logic for GM switching & Beat update)
-    // We still use local logic to determine GM switch before asking AI, 
-    // or we could let AI decide. For now, let's keep local logic for state updates
-    // and pass the *updated* state to the AI.
-
-    const { newState, messages: localMessages } = processTurn(userInput, gameState);
-
-    // Display local messages (like GM switch warnings) immediately
-    if (localMessages.length > 0) {
-      // Filter out the mock flavor text and choices from local engine, keep only system messages
-      // This is a bit hacky, ideally we separate logic. 
-      // For now, let's just use the AI response for the main content.
-      const systemMessages = localMessages.filter(m => m.startsWith("\n⚠") || m.startsWith("\n>>") || m.startsWith("\n==="));
-      setHistory((prev) => [...prev, ...systemMessages]);
-    }
-
-    setGameState(newState);
-
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: userInput, gameState: newState }),
+        body: JSON.stringify({ input: userInput, gameState: currentState }),
       });
 
       if (!response.ok) throw new Error("API Error");
@@ -127,10 +103,42 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       setHistory((prev) => [...prev, "⚠ COMMUNICATION ERROR: Neural Link Severed."]);
+      // Save data for retry
+      setRetryData({ input: userInput, state: currentState });
     } finally {
       setIsLoading(false);
       setThinkingMessage("");
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !gameState) return;
+
+    const userInput = input;
+    setInput(""); // Clear input immediately
+
+    // Add user input to history
+    setHistory((prev) => [...prev, `> ${userInput}`]);
+
+    // Process turn (Local Logic for GM switching & Beat update)
+    const { newState, messages: localMessages } = processTurn(userInput, gameState);
+
+    // Display local messages (like GM switch warnings) immediately
+    if (localMessages.length > 0) {
+      const systemMessages = localMessages.filter(m => m.startsWith("\n⚠") || m.startsWith("\n>>") || m.startsWith("\n==="));
+      setHistory((prev) => [...prev, ...systemMessages]);
+    }
+
+    setGameState(newState);
+    await sendToAPI(userInput, newState);
+  };
+
+  const handleRetry = async () => {
+    if (!retryData) return;
+    // Remove the last error message from history to keep it clean
+    setHistory((prev) => prev.slice(0, -1));
+    await sendToAPI(retryData.input, retryData.state);
   };
 
   const handleRestart = () => {
@@ -150,6 +158,7 @@ export default function Home() {
       "どこから物語を始めますか？",
     ]);
     setInput("");
+    setRetryData(null);
   };
 
   return (
@@ -168,6 +177,15 @@ export default function Home() {
               <div className="mt-4 text-green-400 animate-pulse">
                 {thinkingMessage}
                 <span className="animate-bounce">_</span>
+              </div>
+            ) : retryData ? (
+              <div className="mt-4">
+                <button
+                  onClick={handleRetry}
+                  className="border border-red-500 text-red-500 px-4 py-1 hover:bg-red-500 hover:text-black transition-colors terminal-font animate-pulse"
+                >
+                  ⚠ RECONNECT NEURAL LINK (RETRY)
+                </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
