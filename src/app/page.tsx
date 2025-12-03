@@ -8,6 +8,8 @@ import { GameState } from "@/lib/types";
 export default function Home() {
   const [input, setInput] = useState("");
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [thinkingMessage, setThinkingMessage] = useState("");
   const [history, setHistory] = useState<string[]>([
     "INITIALIZING SYSTEM...",
     "LOADING NARRATIVE MODULES...",
@@ -31,7 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history]);
+  }, [history, isLoading]); // Scroll when loading state changes too
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,16 @@ export default function Home() {
 
     const userInput = input;
     setInput(""); // Clear input immediately
+    setIsLoading(true);
+
+    // Select thinking message based on current GM
+    const currentGM = PERSONALITIES[gameState.currentGMId];
+    if (currentGM && currentGM.thinkingMessages) {
+      const randomMsg = currentGM.thinkingMessages[Math.floor(Math.random() * currentGM.thinkingMessages.length)];
+      setThinkingMessage(randomMsg);
+    } else {
+      setThinkingMessage("GM is thinking...");
+    }
 
     // Add user input to history
     setHistory((prev) => [...prev, `> ${userInput}`]);
@@ -115,6 +127,9 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       setHistory((prev) => [...prev, "⚠ COMMUNICATION ERROR: Neural Link Severed."]);
+    } finally {
+      setIsLoading(false);
+      setThinkingMessage("");
     }
   };
 
@@ -148,17 +163,26 @@ export default function Home() {
         ))}
 
         {gameState?.status === "active" ? (
-          <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
-            <span className="mr-2">{">"}</span>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="terminal-input flex-1"
-              autoFocus
-              spellCheck={false}
-            />
-          </form>
+          <>
+            {isLoading ? (
+              <div className="mt-4 text-green-400 animate-pulse">
+                {thinkingMessage}
+                <span className="animate-bounce">_</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
+                <span className="mr-2">{">"}</span>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className="terminal-input flex-1"
+                  autoFocus
+                  spellCheck={false}
+                />
+              </form>
+            )}
+          </>
         ) : (
           <div className="mt-8 text-center">
             <h1 className="text-4xl font-bold mb-4 glitch-text">

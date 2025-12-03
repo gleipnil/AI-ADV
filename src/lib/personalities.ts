@@ -8,6 +8,7 @@ export type GMPersonality = {
     tone: string;
     isHidden?: boolean; // 最初からは選べない、途中参加専用のGM
     preferredStructure?: string;
+    thinkingMessages: string[];
 };
 
 export const PERSONALITIES: Record<string, GMPersonality> = {
@@ -19,7 +20,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["協力", "冒険の始まり", "素直な反応"],
         dislikes: ["無視", "沈黙"],
         tone: "丁寧で穏やか。チュートリアルのような親切さ。",
-        preferredStructure: "save_the_cat"
+        preferredStructure: "save_the_cat",
+        thinkingMessages: [
+            "案内人が次の展開を記しています...",
+            "あなたの選択を記録中...",
+            "物語の道筋を確認しています...",
+            "案内人が静かに微笑んでいます..."
+        ]
     },
     historian: {
         id: "historian",
@@ -29,7 +36,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["論理的思考", "自己犠牲", "詳細な観察", "史実に基づいた展開"],
         dislikes: ["ジョーク", "魔法", "ご都合主義", "非現実的なアクション"],
         tone: "冷静沈着。興奮時は『〜である』『〜せよ』といった古風な断定口調。",
-        preferredStructure: "save_the_cat"
+        preferredStructure: "save_the_cat",
+        thinkingMessages: [
+            "歴史家が史実と照らし合わせています...",
+            "因果関係を計算中...",
+            "歴史家が眉をひそめています...",
+            "記録を検索中..."
+        ]
     },
     jester: {
         id: "jester",
@@ -39,7 +52,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["混沌", "ユーモア", "無謀な挑戦", "権威への反逆"],
         dislikes: ["正義", "平凡", "慎重さ", "シリアスな空気"],
         tone: "ハイテンション。興奮時は『〜だネ！』『〜しちゃおうヨ！』といった狂気じみた口調。",
-        preferredStructure: "story_circle"
+        preferredStructure: "story_circle",
+        thinkingMessages: [
+            "道化師がニヤニヤしています...",
+            "面白い展開を思いついたようです...",
+            "道化師がボールをジャグリングしています...",
+            "ケケケ...次はどうしてやろうか..."
+        ]
     },
     bard: {
         id: "bard",
@@ -49,7 +68,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["ロマンス", "自己犠牲", "美しい情景", "感情的な対話"],
         dislikes: ["効率重視", "無粋な暴力", "感情のない取引", "急ぎ足な展開"],
         tone: "優雅で情緒的。興奮時は『ああ、なんと〜なことか！』といった詠嘆調。",
-        preferredStructure: "save_the_cat"
+        preferredStructure: "save_the_cat",
+        thinkingMessages: [
+            "詩人がリュートを爪弾いています...",
+            "美しい表現を探しています...",
+            "詩人が空を見上げています...",
+            "感動的な展開を構想中..."
+        ]
     },
     warlord: {
         id: "warlord",
@@ -59,7 +84,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["巨大な敵", "軍隊の指揮", "派手な爆発・魔法", "英雄的な突撃"],
         dislikes: ["逃走", "隠密行動", "平和的な解決", "細かい謎解き"],
         tone: "荒々しく豪快。興奮時は『貴様！』『〜だッ！』といった熱血・軍隊口調。",
-        preferredStructure: "story_circle"
+        preferredStructure: "story_circle",
+        thinkingMessages: [
+            "将軍が作戦盤を睨んでいます...",
+            "次の敵を配置中...",
+            "将軍が剣を研いでいます...",
+            "戦況を分析中..."
+        ]
     },
     detective: {
         id: "detective",
@@ -69,7 +100,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["証拠", "論理的推理", "聞き込み", "真実の追求"],
         dislikes: ["脳筋プレイ", "証拠隠滅", "未解決事件", "非論理的な飛躍"],
         tone: "知的で冷静。「真実はいつも一つ」「ふむ、興味深い」が口癖。",
-        preferredStructure: "kishotenketsu"
+        preferredStructure: "kishotenketsu",
+        thinkingMessages: [
+            "探偵が証拠を整理しています...",
+            "推理を組み立て中...",
+            "探偵がパイプをふかしています...",
+            "「ふむ...」と考え込んでいます..."
+        ]
     },
     cyberpunk: {
         id: "cyberpunk",
@@ -80,7 +117,13 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         dislikes: ["迷信", "伝統", "魔法（と呼ぶこと）", "自然崇拝"],
         tone: "攻撃的で早口。興奮時は『クソッ』『〜だろ？』といったストリートスラング。",
         isHidden: true,
-        preferredStructure: "story_circle"
+        preferredStructure: "story_circle",
+        thinkingMessages: [
+            "データをダウンロード中...",
+            "現実をハッキングしています...",
+            "ノイズが走っています...",
+            "システムを上書き中..."
+        ]
     },
     madgod: {
         id: "madgod",
@@ -90,6 +133,12 @@ export const PERSONALITIES: Record<string, GMPersonality> = {
         likes: ["メタ発言", "バグのような挙動", "論理の崩壊", "プレイヤーへの干渉"],
         dislikes: ["没入感", "一貫性", "普通のゲームプレイ", "予測可能な展開"],
         tone: "支離滅裂。興奮時は『ERROR』『削除』といったシステムメッセージ風の言葉が混じる。",
-        isHidden: true
+        isHidden: true,
+        thinkingMessages: [
+            "E̶R̶R̶O̶R̶...",
+            "世界を再構築しています...",
+            "狂神がこちらを見ています...",
+            "404 NOT FOUND..."
+        ]
     }
 };
