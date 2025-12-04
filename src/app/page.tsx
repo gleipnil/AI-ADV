@@ -310,7 +310,7 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="bg-transparent border-none outline-none text-green-500 font-mono w-full"
+                className="bg-transparent border-none outline-none text-white font-mono w-full"
                 autoFocus
                 placeholder="What will you do?"
               />
@@ -334,14 +334,14 @@ export default function Home() {
       {/* Function Key Bar */}
       {gameState?.status === "active" && !isLoading && (
         <div className="fixed bottom-0 left-0 w-full bg-black border-t-2 border-green-900 flex flex-row justify-start items-center p-1 gap-1 overflow-x-auto z-50">
-          <FunctionKey label="F1 LOOK" onClick={() => handleFunctionKey("look", "周囲を見る")} />
-          <FunctionKey label="F2 TALK" onClick={() => handleFunctionKey("talk", "話しかける")} />
-          <FunctionKey label="F3 ITEM" onClick={() => handleFunctionKey("item", "持ち物")} />
+          <FunctionKey label="LOOK" onClick={() => handleFunctionKey("look", "周囲を見る")} />
+          <FunctionKey label="TALK" onClick={() => handleFunctionKey("talk", "話しかける")} />
+          <FunctionKey label="ITEM" onClick={() => handleFunctionKey("item", "持ち物")} />
           {special1 && (
-            <FunctionKey label={`F4 ${special1.id.toUpperCase()}`} onClick={() => handleFunctionKey("gm1", special1.label)} />
+            <FunctionKey label={special1.label.toUpperCase()} onClick={() => handleFunctionKey("gm1", special1.label)} />
           )}
           {special2 && (
-            <FunctionKey label={`F5 ${special2.id.toUpperCase()}`} onClick={() => handleFunctionKey("gm2", special2.label)} />
+            <FunctionKey label={special2.label.toUpperCase()} onClick={() => handleFunctionKey("gm2", special2.label)} />
           )}
         </div>
       )}

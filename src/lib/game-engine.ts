@@ -51,7 +51,7 @@ export function createInitialState(): GameState {
 // GMごとの特殊選択肢定義
 export const GM_SPECIAL_CHOICES: Record<string, { id: string; label: string; description: string }[]> = {
     guide: [
-        { id: "l", label: "Look", description: "周囲をよく見る" },
+        { id: "t", label: "Think", description: "状況を整理する" },
         { id: "m", label: "Move", description: "先に進む" }
     ],
     historian: [
@@ -60,23 +60,19 @@ export const GM_SPECIAL_CHOICES: Record<string, { id: string; label: string; des
     ],
     warlord: [
         { id: "a", label: "Attack", description: "問答無用で殴りかかる" },
-        { id: "c", label: "Charge", description: "雄叫びを上げて突撃する" },
-        { id: "i", label: "Intimidate", description: "威圧して屈服させる" }
+        { id: "c", label: "Charge", description: "雄叫びを上げて突撃する" }
     ],
     jester: [
         { id: "m", label: "Mock", description: "相手を小馬鹿にする" },
-        { id: "d", label: "Dance", description: "意味もなく踊り出す" },
-        { id: "p", label: "Prank", description: "パイを投げつける" }
+        { id: "d", label: "Dance", description: "意味もなく踊り出す" }
     ],
     detective: [
         { id: "i", label: "Investigate", description: "徹底的に調べる" },
-        { id: "d", label: "Deduce", description: "推理を披露する" },
-        { id: "q", label: "Question", description: "相手を尋問する" }
+        { id: "d", label: "Deduce", description: "推理を披露する" }
     ],
     bard: [
         { id: "p", label: "Poem", description: "即興で詩を詠む" },
-        { id: "s", label: "Sing", description: "感情を込めて歌う" },
-        { id: "l", label: "Lament", description: "世界の悲劇を嘆く" }
+        { id: "s", label: "Sing", description: "感情を込めて歌う" }
     ],
     storyteller: [
         { id: "l", label: "Listen", description: "耳を澄ます" },
