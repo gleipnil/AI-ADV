@@ -89,6 +89,7 @@ Instructions:
     - **MadGod**: Meta-gaming, breaking the 4th wall, glitching, system probing.
     
     **Rules for Recommendation**:
+    - **Early Game (Turns 1-5)**: Be HIGHLY SENSITIVE to player intent. If the player shows even a slight leaning towards a specific style (e.g., a single attack, a single joke, a single question), recommend the corresponding GM IMMEDIATELY. Do not wait for a repeated pattern.
     - If the action is standard or unclear, recommend the **Current GM**.
     - If the action is nonsense/gibberish but harmless, recommend **Jester** (or keep current).
     - If the action attempts to break the game or access system internals, recommend **MadGod**.

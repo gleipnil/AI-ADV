@@ -145,6 +145,26 @@ export default function Home() {
     const userInput = input;
     setInput(""); // Clear input immediately
 
+    // Debug Command: Q
+    if (userInput.toUpperCase() === "Q") {
+      const debugInfo = [
+        "=== DEBUG INFO ===",
+        `Turn: ${gameState.turnCount}`,
+        `Structure: ${gameState.currentStructure}`,
+        `Beat: ${gameState.currentBeat}`,
+        `Current GM: ${gameState.currentGMId}`,
+        `Stagnation: ${gameState.stagnationCount}`,
+        `Karma: ${gameState.player.karma}`,
+        `Inventory: ${gameState.player.inventory.join(", ") || "None"}`,
+        "GM Affinity:",
+        ...Object.entries(gameState.gmAffinity).map(([id, score]) => `  - ${id}: ${score}`),
+        "=================="
+      ].join("\n");
+
+      setHistory((prev) => [...prev, `> ${userInput}`, debugInfo]);
+      return; // Early return, do not process turn or call API
+    }
+
     // Add user input to history
     setHistory((prev) => [...prev, `> ${userInput}`]);
 
@@ -192,6 +212,11 @@ export default function Home() {
     <div className="crt-container">
       <div className="crt-overlay" />
       <div className="terminal-content">
+        {gameState && (
+          <div className="fixed top-4 right-4 text-green-500 opacity-50 pointer-events-none">
+            TURN: {gameState.turnCount}
+          </div>
+        )}
         {history.map((line, i) => (
           <div key={i} className="whitespace-pre-wrap mb-1">
             {line}
