@@ -310,7 +310,7 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="bg-transparent border-none outline-none text-white font-mono w-full"
+                className="bg-transparent border-none outline-none text-white w-full"
                 autoFocus
                 placeholder="What will you do?"
               />
