@@ -49,7 +49,7 @@ export function createInitialState(): GameState {
 }
 
 // GMごとの特殊選択肢定義
-const GM_SPECIAL_CHOICES: Record<string, { id: string; label: string; description: string }[]> = {
+export const GM_SPECIAL_CHOICES: Record<string, { id: string; label: string; description: string }[]> = {
     guide: [
         { id: "l", label: "Look", description: "周囲をよく見る" },
         { id: "m", label: "Move", description: "先に進む" }

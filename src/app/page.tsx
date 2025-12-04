@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { PERSONALITIES } from "@/lib/personalities";
-import { createInitialState, processTurn, processAIResponse } from "@/lib/game-engine";
+import { createInitialState, processTurn, processAIResponse, GM_SPECIAL_CHOICES } from "@/lib/game-engine";
 import { GameState } from "@/lib/types";
 
 export default function Home() {
@@ -208,10 +208,86 @@ export default function Home() {
     setRetryData(null);
   };
 
+  const handleFunctionKey = async (actionId: string, label: string) => {
+    if (!gameState) return;
+
+    // F1: LOOK (Free Action)
+    if (actionId === "look") {
+      setHistory((prev) => [...prev, `> ${label}`]);
+      setIsLoading(true);
+      setThinkingMessage("OBSERVING...");
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: "周囲を詳しく観察する",
+            gameState: gameState,
+            mode: "inspection" // Special mode for free action
+          }),
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        setHistory((prev) => [...prev, data.message]);
+      } catch (error) {
+        console.error(error);
+        setHistory((prev) => [...prev, "⚠ SENSOR ERROR: Visual feed interrupted."]);
+      } finally {
+        setIsLoading(false);
+        setThinkingMessage("");
+      }
+      return;
+    }
+
+    // F3: ITEM (Free Action - Local)
+    if (actionId === "item") {
+      setHistory((prev) => [...prev, `> ${label}`]);
+      const inventoryList = gameState.player.inventory.length > 0
+        ? gameState.player.inventory.join(", ")
+        : "Nothing.";
+      setHistory((prev) => [...prev, `[INVENTORY]: ${inventoryList}`]);
+      return;
+    }
+
+    // Other Actions (Consume Turn)
+    let input = "";
+    switch (actionId) {
+      case "talk": input = "近くの誰かに話しかける"; break;
+      // case "item": input = "持ち物を確認する"; break; // Moved to free action
+      case "gm1": input = label; break; // GM Action 1
+      case "gm2": input = label; break; // GM Action 2
+      default: return;
+    }
+
+    // Execute as normal input
+    setInput(input); // Set input for visual feedback if needed, or just pass directly
+    // We need to trigger handleSubmit-like logic.
+    // Since handleSubmit uses the 'input' state, we can't just call it directly easily without setting state and waiting.
+    // So we'll duplicate the core logic or extract it. 
+    // For simplicity, let's just call the internal logic directly.
+
+    setHistory((prev) => [...prev, `> ${input}`]);
+    const { newState, messages: localMessages } = processTurn(input, gameState);
+    if (localMessages.length > 0) {
+      const systemMessages = localMessages.filter(m => m.startsWith("\n⚠") || m.startsWith("\n>>") || m.startsWith("\n==="));
+      setHistory((prev) => [...prev, ...systemMessages]);
+    }
+    setGameState(newState);
+    await sendToAPI(input, newState);
+  };
+
+  // Get current GM's special actions
+  const gmSpecials = gameState ? GM_SPECIAL_CHOICES[gameState.currentGMId] || [] : [];
+  const special1 = gmSpecials[0];
+  const special2 = gmSpecials[1];
+
   return (
     <div className="crt-container">
       <div className="crt-overlay" />
-      <div className="terminal-content">
+      <div className="terminal-content pb-16">
         {gameState && (
           <div className="fixed top-4 right-4 text-green-500 opacity-50 pointer-events-none">
             TURN: {gameState.turnCount}
@@ -222,52 +298,63 @@ export default function Home() {
             {line}
           </div>
         ))}
-
         {gameState?.status === "active" ? (
-          <>
-            {isLoading ? (
-              <div className="mt-4 text-green-400 animate-pulse">
-                {thinkingMessage}
-                <span className="animate-bounce">_</span>
-              </div>
-            ) : retryData ? (
-              <div className="mt-4">
-                <button
-                  onClick={handleRetry}
-                  className="border border-red-500 text-red-500 px-4 py-1 hover:bg-red-500 hover:text-black transition-colors terminal-font animate-pulse"
-                >
-                  ⚠ RECONNECT NEURAL LINK (RETRY)
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
-                <span className="mr-2">{">"}</span>
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="terminal-input flex-1"
-                  autoFocus
-                  spellCheck={false}
-                />
-              </form>
-            )}
-          </>
+          isLoading ? (
+            <div className="mt-4 animate-pulse text-green-400">
+              {thinkingMessage || "PROCESSING..."}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-row items-center mt-4">
+              <span className="mr-2">{">"}</span>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="bg-transparent border-none outline-none text-green-500 font-mono w-full"
+                autoFocus
+                placeholder="What will you do?"
+              />
+            </form>
+          )
         ) : (
-          <div className="mt-8 text-center">
-            <h1 className="text-4xl font-bold mb-4 glitch-text">
-              {gameState?.status === "completed" ? "THE END" : "GAME OVER"}
-            </h1>
+          <div className="mt-4 text-green-500">
+            {gameState?.status === "completed" ? ">> MISSION ACCOMPLISHED." :
+              gameState?.status === "game_over" ? ">> CRITICAL FAILURE." : ""}
             <button
               onClick={handleRestart}
-              className="border-2 border-green-500 px-6 py-2 hover:bg-green-500 hover:text-black transition-colors terminal-font"
+              className="block mt-4 border border-green-500 px-4 py-2 hover:bg-green-900"
             >
-              RESTART SYSTEM
+              SYSTEM REBOOT
             </button>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
+
+      {/* Function Key Bar */}
+      {gameState?.status === "active" && !isLoading && (
+        <div className="fixed bottom-0 left-0 w-full bg-black border-t-2 border-green-900 flex flex-row justify-start items-center p-1 gap-1 overflow-x-auto z-50">
+          <FunctionKey label="F1 LOOK" onClick={() => handleFunctionKey("look", "周囲を見る")} />
+          <FunctionKey label="F2 TALK" onClick={() => handleFunctionKey("talk", "話しかける")} />
+          <FunctionKey label="F3 ITEM" onClick={() => handleFunctionKey("item", "持ち物")} />
+          {special1 && (
+            <FunctionKey label={`F4 ${special1.id.toUpperCase()}`} onClick={() => handleFunctionKey("gm1", special1.label)} />
+          )}
+          {special2 && (
+            <FunctionKey label={`F5 ${special2.id.toUpperCase()}`} onClick={() => handleFunctionKey("gm2", special2.label)} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+// Helper Component for Function Keys
+const FunctionKey = ({ label, onClick }: { label: string, onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="bg-gray-200 text-black font-bold font-mono px-3 py-1 text-sm hover:bg-white active:bg-gray-400 min-w-[80px]"
+  >
+    {label}
+  </button>
+);

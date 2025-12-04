@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
     try {
-        const { input, gameState }: { input: string; gameState: GameState } = await req.json();
+        const { input, gameState, mode }: { input: string; gameState: GameState, mode?: string } = await req.json();
 
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json(
@@ -26,8 +26,26 @@ export async function POST(req: Request) {
         // Create a list of all beats in the current structure for the AI to reference
         const beatList = beats.map(b => `- ${b.name}: ${b.description}`).join("\n");
 
-        // Build the prompt
-        const systemInstruction = `
+        let systemInstruction = "";
+
+        if (mode === "inspection") {
+            // Inspection Mode Prompt
+            systemInstruction = `
+You are the Game Master of a text-based adventure game.
+Your current persona is: ${currentGM.name} (${currentGM.description}).
+${currentGM.systemPrompt}
+
+The player is observing their surroundings.
+Describe the current situation and environment in detail based on the recent history.
+- Do NOT advance the story time or plot.
+- Do NOT generate new choices.
+- Output ONLY the description text.
+- Maintain your persona's tone: ${currentGM.tone}.
+- Provide the description in Japanese.
+`;
+        } else {
+            // Standard Game Mode Prompt
+            systemInstruction = `
 You are the Game Master of a text-based adventure game.
 Your current persona is: ${currentGM.name} (${currentGM.description}).
 ${currentGM.systemPrompt}
@@ -68,6 +86,7 @@ Instructions:
 7. After your response, suggest 2-3 choices for the player. Format choices as: [ID] Label - Description.
    - **IMPORTANT**: The [ID] MUST be a single alphabet letter (e.g., [A], [B], [C]).
    - Example: [N] North - Go to the forest.
+   - **IMPORTANT**: Do NOT suggest basic actions like 'Look', 'Talk', or 'Check Inventory' as choices, as these are available via UI buttons. Focus on ACTIVE choices that drive the plot (e.g., Move, Attack, Decide, Interact).
 8. Do NOT output JSON. Output raw text formatted for a retro terminal.
 9. **Game Endings**:
    - If the player successfully completes the main objective or reaches a narrative conclusion, output the tag [THE_END] at the very end.
@@ -97,6 +116,7 @@ Instructions:
     Output the tag [RECOMMEND_GM: gm_id] at the very end of your response.
     Example: [RECOMMEND_GM: warlord]
 `;
+        }
 
         const model = genAI.getGenerativeModel({
             model: "gemini-2.0-flash-lite-preview-02-05",
