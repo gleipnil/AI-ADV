@@ -4,10 +4,10 @@ import { GameState } from "./types";
 
 // キーワードによるGMの反応定義
 const GM_TRIGGERS: Record<string, string[]> = {
-    warlord: ["戦う", "攻撃", "剣", "殺す", "軍", "戦争", "殴る", "破壊"],
+    warlord: ["戦う", "攻撃", "剣", "殺す", "軍", "戦争", "殴る", "破壊", "闘"],
     detective: ["推理", "証拠", "謎", "調べる", "尋問", "論理", "犯人", "トリック"],
-    jester: ["笑う", "踊る", "盗む", "嘘", "冗談", "イタズラ", "狂う", "遊ぶ"],
-    bard: ["歌う", "詩", "泣く", "祈る", "美しい", "祈り", "犠牲", "守る"],
+    jester: ["笑", "踊る", "盗", "嘘", "冗談", "イタズラ", "狂う", "遊", "騙"],
+    bard: ["歌う", "詩", "泣く", "抱擁", "美しい", "祈り", "犠牲", "守る"],
     storyteller: ["怖い", "暗い", "音", "幽霊", "呪い", "死", "逃げる", "隠れる", "怪談", "恐怖"],
     cyberpunk: ["ハッキング", "コード", "電脳", "ネットワーク", "インストール", "バグ", "AI", "未来"],
     madgod: ["リセット", "デバッグ", "GM", "システム", "終了", "コンソール", "メタ"],
@@ -131,59 +131,13 @@ export function processTurn(input: string, state: GameState): { newState: GameSt
     }
 
     // 2. GMの切り替え判定 (Determine GM Switch)
-    // 選択肢によるアクションもキーワードとして扱う
+    // AI主導に移行したため、ここでのキーワード判定は削除。
+    // ただし、Intro (Turn 1-3) の処理はAIに任せるか、あるいはここで簡易的にやるか。
+    // 今回の設計変更で「AIが推奨する」形になったので、クライアント側でAPIレスポンスを見て切り替える。
+    // したがって、ここでは currentGMId は変更しない。
+
     let nextGMId = newState.currentGMId;
-    let gmSwitchMessage = "";
-
-    // イントロ期間 (Turn 1-3)
-    if (newState.turnCount <= 3 && newState.currentGMId === "guide") {
-        // キーワードに基づいて親和性を更新
-        for (const [gmId, keywords] of Object.entries(GM_TRIGGERS)) {
-            if (keywords.some(k => processedInput.includes(k))) {
-                newState.gmAffinity[gmId] = (newState.gmAffinity[gmId] || 0) + 1;
-            }
-        }
-
-        // 3ターン目終了時に交代
-        if (newState.turnCount === 3) {
-            // Find max affinity
-            let maxAffinity = -1;
-            let bestGM = "historian";
-
-            for (const [gmId, score] of Object.entries(newState.gmAffinity)) {
-                if (score > maxAffinity) {
-                    maxAffinity = score;
-                    bestGM = gmId;
-                }
-            }
-
-            // If no specific affinity was built (all 0), choose randomly from the 4 main GMs
-            if (maxAffinity === 0) {
-                const defaultGMs = ["historian", "jester", "bard", "warlord"];
-                bestGM = defaultGMs[Math.floor(Math.random() * defaultGMs.length)];
-            }
-
-            nextGMId = bestGM;
-            const gm = PERSONALITIES[nextGMId];
-            gmSwitchMessage = `\n>> 案内人: 「ふむ、あなたの傾向はよく分かりました。ここからは彼に任せましょう。」\n>> ${gm.name} が物語を引き継ぎました。\n`;
-        }
-    } else {
-        // 通常の交代ロジック (Turn > 3 or not guide)
-        for (const [gmId, keywords] of Object.entries(GM_TRIGGERS)) {
-            if (keywords.some(k => processedInput.includes(k))) {
-                if (newState.currentGMId !== gmId) {
-                    nextGMId = gmId;
-                    const gm = PERSONALITIES[gmId];
-                    if (gm.isHidden) {
-                        gmSwitchMessage = `\n⚠ WARNING: UNKNOWN SIGNAL DETECTED.\n>> ${gm.name} が乱入しました！\n`;
-                    } else {
-                        gmSwitchMessage = `\n>> ${gm.name} が興味を示しました。\n`;
-                    }
-                }
-                break; // 最初のマッチで決定
-            }
-        }
-    }
+    // (旧ロジック削除済み)
 
     newState.currentGMId = nextGMId;
     const currentGM = PERSONALITIES[newState.currentGMId];
@@ -220,9 +174,10 @@ export function processTurn(input: string, state: GameState): { newState: GameSt
     }
 
     // 4. GM交代メッセージがあれば追加
-    if (gmSwitchMessage) {
-        messages.push(gmSwitchMessage);
-    }
+    // AI側でメッセージを生成するため、ここでは追加しない
+    // if (gmSwitchMessage) {
+    //     messages.push(gmSwitchMessage);
+    // }
 
     // 5. モックレスポンス生成 (Generate Mock Response)
     const mockResponses = [

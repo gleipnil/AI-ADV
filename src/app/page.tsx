@@ -77,6 +77,32 @@ export default function Home() {
         messageContent = messageContent.replace("[GAME_OVER]", "").trim();
       }
 
+      // Check for GM Recommendation
+      let nextGMId = currentState.currentGMId;
+      const gmMatch = messageContent.match(/\[RECOMMEND_GM:\s*(\w+)\]/);
+      if (gmMatch) {
+        const recommendedId = gmMatch[1].toLowerCase();
+        if (PERSONALITIES[recommendedId] && recommendedId !== currentState.currentGMId) {
+          nextGMId = recommendedId;
+          // Remove the tag from display
+          messageContent = messageContent.replace(gmMatch[0], "").trim();
+
+          // Add switch message
+          const newGM = PERSONALITIES[nextGMId];
+          let switchMsg = "";
+          if (newGM.isHidden) {
+            switchMsg = `\n⚠ WARNING: UNKNOWN SIGNAL DETECTED.\n>> ${newGM.name} が乱入しました！\n`;
+          } else {
+            switchMsg = `\n>> ${newGM.name} が興味を示しました。\n`;
+          }
+          // Prepend switch message to the AI response content for display
+          messageContent = switchMsg + messageContent;
+        } else {
+          // Just remove the tag if no switch or invalid GM
+          messageContent = messageContent.replace(gmMatch[0], "").trim();
+        }
+      }
+
       setHistory((prev) => [...prev, messageContent]);
 
       // Update history in state for context in next turn
@@ -87,6 +113,7 @@ export default function Home() {
           ...prev,
           status: newStatus as any,
           stagnationCount: isStagnant ? prev.stagnationCount + 1 : 0, // Increment or reset
+          currentGMId: nextGMId, // Update GM
           history: [
             ...prev.history,
             { role: "user" as const, content: userInput },
