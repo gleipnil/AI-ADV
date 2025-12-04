@@ -211,37 +211,6 @@ export default function Home() {
   const handleFunctionKey = async (actionId: string, label: string) => {
     if (!gameState) return;
 
-    // F1: LOOK (Free Action)
-    if (actionId === "look") {
-      setHistory((prev) => [...prev, `> ${label}`]);
-      setIsLoading(true);
-      setThinkingMessage("OBSERVING...");
-
-      try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: "周囲を詳しく観察する",
-            gameState: gameState,
-            mode: "inspection" // Special mode for free action
-          }),
-        });
-
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-
-        setHistory((prev) => [...prev, data.message]);
-      } catch (error) {
-        console.error(error);
-        setHistory((prev) => [...prev, "⚠ SENSOR ERROR: Visual feed interrupted."]);
-      } finally {
-        setIsLoading(false);
-        setThinkingMessage("");
-      }
-      return;
-    }
-
     // F3: ITEM (Free Action - Local)
     if (actionId === "item") {
       setHistory((prev) => [...prev, `> ${label}`]);
@@ -255,6 +224,7 @@ export default function Home() {
     // Other Actions (Consume Turn)
     let input = "";
     switch (actionId) {
+      case "look": input = "周囲を詳しく観察する"; break;
       case "talk": input = "近くの誰かに話しかける"; break;
       // case "item": input = "持ち物を確認する"; break; // Moved to free action
       case "gm1": input = label; break; // GM Action 1
