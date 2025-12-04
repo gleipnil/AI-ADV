@@ -74,9 +74,9 @@ Instructions:
    - If the player dies or fails irrevocably, output the tag [GAME_OVER] at the very end.
 10. **GM Evaluation (Required when [THE_END] or [GAME_OVER] is triggered)**:
     - Before the tag, provide a "GM Evaluation" section.
-    - **Summary**: 1-2 lines summarizing the story.
-    - **Feedback**: Evaluate the player's actions.
-    - Format this section clearly (e.g., using "=== GM EVALUATION ===").
+    - **Summary**: 1-2 lines summarizing the story (in Japanese).
+    - **Feedback**: Evaluate the player's actions (in Japanese).
+    - Format this section clearly (e.g., using "=== GM評価 ===").
 11. **GM Recommendation (Invisible to Player)**:
     Analyze the player's latest action: "${input}".
     Based on the action's intent, recommend the most suitable GM personality to take over (or keep the current one).
