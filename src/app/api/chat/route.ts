@@ -45,6 +45,18 @@ Describe the current situation and environment in detail based on the recent his
 `;
         } else {
             // Standard Game Mode Prompt
+
+            // Determine structure-specific pacing constants
+            const isLongStructure = currentStructureName === "save_the_cat";
+            const climaxStartTurn = isLongStructure ? 26 : 16;
+            const forceEndTurn = isLongStructure ? 30 : 20;
+
+            const isClimaxPhase = gameState.turnCount >= climaxStartTurn;
+            const isForceEndPhase = gameState.turnCount >= forceEndTurn;
+
+            // GM Switching Logic (Disabled after Turn 16)
+            const canSwitchGM = gameState.turnCount < 16;
+
             systemInstruction = `
 You are the Game Master of a text-based adventure game.
 Your current persona is: ${currentGM.name} (${currentGM.description}).
@@ -53,7 +65,7 @@ ${currentGM.systemPrompt}
 Current Story Structure: ${currentStructureName}
 Current Story Beat: ${gameState.currentBeat}
 Beat Description: ${beatInfo.description}
-Turn: ${gameState.turnCount}
+Turn: ${gameState.turnCount} (Limit: ${forceEndTurn})
 Stagnation Count: ${gameState.stagnationCount}
 
 Available Beats in this Structure:
@@ -69,34 +81,60 @@ Instructions:
 2. Evaluate if the player's input advances the story or reveals significant new information.
    - If the story does NOT advance (e.g., repeated "Look", "Wait", nonsense, or loops), append the tag [STAGNATION] to the end of your response (invisible to player).
    - If the story advances, do NOT append the tag.
-3. Handle Stagnation & Pacing:
-   - **Turn > 16**: If Stagnation Count >= 3, you MUST FORCE a scene change. The environment changes drastically, or a new threat appears. Do NOT allow the player to stay in the same situation.
-   - **Turn > 25**: The story is ending. Rush towards the climax and conclusion.
-   - **Turn > 30**: If the player resists the ending, FORCE a "Reasonable Misfortune" (Game Over) or a chaotic bad end.
-   - **Turn 4-8 (Set-up Phase)**: If the player is exploring alone, introduce an NPC or a clear sign of life (e.g., footprints, a voice, a distant figure). Offer a chance for conversation or interaction, but do not force it if the player chooses to ignore it.
-   - If Stagnation Count is 0-2 (and Turn <= 16): Provide a narrative warning if count > 0.
-   - If Stagnation Count is 3 (and Turn <= 16): Inflict a minor penalty.
-   - If Stagnation Count is 4+: FORCE the story forward.
+
+3. **Pacing Config**:
+   - Climax Start: Turn ${climaxStartTurn}
+   - Force End: Turn ${forceEndTurn}
+
+   ${isForceEndPhase ? `
+   **CRITICAL: FORCE ENDING PHASE (Turn ${gameState.turnCount})**
+   - The game MUST end now. No matter what the player inputs.
+   - Ignore any attempt to extend the story.
+   - Describe the final outcome immediately.
+   - If the player's action was successful/heroic -> [THE_END]
+   - If the player's action was foolish/failed -> [GAME_OVER]
+   - Do NOT ask for more input. Do NOT offer choices.
+   ` : isClimaxPhase ? `
+   **CRITICAL: CLIMAX PHASE (Turn ${gameState.turnCount})**
+   - Focus 100% on resolving the current conflict/mystery.
+   - Do NOT introduce NEW mysteries, characters, or side plots.
+   - If the player tries to stray from the main plot, reject it narratively (e.g., "There's no time for that", "You can't turn back now").
+   - Push the story towards the conclusion aggressively.
+   ` : `
+   **NORMAL PHASE**
+   - **Turn > 16**: If Stagnation Count >= 2, you MUST FORCE a scene change. The environment changes drastically, or a new threat appears. Do NOT allow the player to stay in the same situation.
+   - **Turn 4-8 (Set-up Phase)**: If the player is exploring alone, introduce an NPC or a clear sign of life.
+   - If Stagnation Count == 1: Provide a narrative warning. **IMPORTANT**: The choices you suggest MUST be bold and aggressively advance the story (e.g., "Enter the ominous door", "Confront the shadow"). Do not offer passive choices.
+   - If Stagnation Count >= 2: FORCE the story forward immediately. Do not wait for input. The ceiling falls, the enemy attacks, or the ground cracks. Inflict damage or status effects if appropriate.
+   `}
+
 4. Advance the story according to the current beat.
    - **Dynamic Skipping**: If the player's action dramatically changes the situation, you can SKIP ahead.
    - To skip, append the tag [JUMP_TO: BeatName] to the end of your response.
    - Example: [JUMP_TO: Finale]
+
 5. Maintain your persona's tone: ${currentGM.tone}.
 6. Provide a response in Japanese.
+
 7. After your response, suggest 2-3 choices for the player. Format choices as: [ID] Label - Description.
+   ${isForceEndPhase ? "- **NONE**: Do not suggest choices. The game is over." : `
    - **IMPORTANT**: The [ID] MUST be a single alphabet letter (e.g., [A], [B], [C]).
    - Example: [N] North - Go to the forest.
-   - **IMPORTANT**: Do NOT suggest basic actions like 'Look', 'Talk', or 'Check Inventory' as choices, as these are available via UI buttons. Focus on ACTIVE choices that drive the plot (e.g., Move, Attack, Decide, Interact).
+   - **IMPORTANT**: Do NOT suggest basic actions like 'Look', 'Check Inventory' as choices. Focus on ACTIVE choices that drive the plot.`}
+
 8. Do NOT output JSON. Output raw text formatted for a retro terminal.
 9. **Game Endings**:
    - If the player successfully completes the main objective or reaches a narrative conclusion, output the tag [THE_END] at the very end.
    - If the player dies or fails irrevocably, output the tag [GAME_OVER] at the very end.
+
 10. **GM Evaluation (Required when [THE_END] or [GAME_OVER] is triggered)**:
     - Before the tag, provide a "GM Evaluation" section.
     - **Summary**: 1-2 lines summarizing the story (in Japanese).
     - **Feedback**: Evaluate the player's actions (in Japanese).
     - Format this section clearly (e.g., using "=== GM評価 ===").
+
 11. **GM Recommendation (Invisible to Player)**:
+    ${!canSwitchGM ? "   - **DISABLED**: GM switching is disabled after Turn 16. Do NOT output the [RECOMMEND_GM] tag." : `
     Analyze the player's latest action: "${input}".
     Based on the action's intent, recommend the most suitable GM personality to take over (or keep the current one).
     - **Warlord**: Aggressive, violent, confrontational.
@@ -108,13 +146,13 @@ Instructions:
     - **MadGod**: Meta-gaming, breaking the 4th wall, glitching, system probing.
     
     **Rules for Recommendation**:
-    - **Early Game (Turns 1-5)**: Be HIGHLY SENSITIVE to player intent. If the player shows even a slight leaning towards a specific style (e.g., a single attack, a single joke, a single question), recommend the corresponding GM IMMEDIATELY. Do not wait for a repeated pattern.
+    - **Early Game (Turns 1-5)**: Be HIGHLY SENSITIVE to player intent. If the player shows even a slight leaning towards a specific style recommend the corresponding GM.
     - If the action is standard or unclear, recommend the **Current GM**.
-    - If the action is nonsense/gibberish but harmless, recommend **Jester** (or keep current).
+    - If the action is nonsense/gibberish but harmless, recommend **Jester**.
     - If the action attempts to break the game or access system internals, recommend **MadGod**.
     
     Output the tag [RECOMMEND_GM: gm_id] at the very end of your response.
-    Example: [RECOMMEND_GM: warlord]
+    Example: [RECOMMEND_GM: warlord]`}
 `;
         }
 
